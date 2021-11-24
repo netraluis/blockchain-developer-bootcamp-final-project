@@ -143,7 +143,7 @@ contract SupplyChain is PullPayment {
     emit LogForShipment(skuCount);
     emit AddMoneyToAccount(_shipper, _price);
     if(address(this).balance > _price ){
-      // _asyncTransfer(_shipper, _price );
+      _asyncTransfer(_shipper, _price );
       return true;
     }else{
       return false;
@@ -187,6 +187,12 @@ contract SupplyChain is PullPayment {
      shipper = items[_sku].shipper;
      return (name, sku, price, state, sender, receiver, shipper); 
   } 
+
+   function getBalance() public view 
+    returns (uint256)
+  {
+    return (msg.sender.balance);
+  }
 
   // function sendMoney(address payable _to, uint ethValue) public payable{
   //   // Call returns a boolean value indicating success or failure.
