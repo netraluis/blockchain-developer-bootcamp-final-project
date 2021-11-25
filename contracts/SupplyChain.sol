@@ -29,7 +29,7 @@ contract SupplyChain is PullPayment {
   struct Item {
     string name;
     uint sku;
-    uint256 price;
+    uint price;
     State state;
     address payable sender;
     address payable receiver;
@@ -59,7 +59,9 @@ contract SupplyChain is PullPayment {
   // <LogReceived event: sku arg>
   event LogReceived(uint sku);
 
-  event AddMoneyToAccount(address _address, uint balance);  
+  event AddMoneyToAccount(address _address, uint payment);  
+
+  event ItemChange(Item item);
 
   /* 
    * Modifiers
@@ -120,41 +122,30 @@ contract SupplyChain is PullPayment {
     _;
   }
 
-  // constructor()  PullPayment()public{
-  //   // 1. Set the owner to the transaction sender
-  //   owner = msg.sender;
-  //   // 2. Initialize the sku count to 0. Question, is this necessary?
-  //   skuCount = 0;
-  // }
-
-  function addItem(string memory _name, uint256 _price, address payable _receiver, address payable _shipper) public payable returns (bool) {
+  function addItem(string memory _name, address payable _receiver, address payable _shipper) public payable returns (bool) {
     items[skuCount] = Item({
       name: _name, 
       sku: skuCount, 
-      price: _price, 
+      price: msg.value, 
       state: State.ForShipment, 
       sender: payable(msg.sender), 
       receiver: payable(_receiver),
       shipper: payable(_shipper)
     });
 
+    emit ItemChange(items[skuCount]);
     
-    skuCount = skuCount + 1;
     emit LogForShipment(skuCount);
-    emit AddMoneyToAccount(_shipper, _price);
-    if(address(this).balance > _price ){
-      _asyncTransfer(_shipper, _price );
+    if( msg.sender.balance > msg.value ){
+      emit AddMoneyToAccount(_shipper, msg.value);
+      _asyncTransfer(_shipper, msg.value );
+      skuCount = skuCount + 1;
       return true;
     }else{
       return false;
     }
     
   }
-
-  // function _asyncTransfer(address dest, uint256 amount) internal override{
-  //   emit AddMoneyToAccount(dest, amount);
-  //   super._asyncTransfer(dest, amount);
-  // }
 
   function shipItem(uint sku) public forShipment(sku) {
     items[sku].shipper = payable(msg.sender);
@@ -189,9 +180,15 @@ contract SupplyChain is PullPayment {
   } 
 
    function getBalance() public view 
-    returns (uint256)
+    returns (uint)
   {
     return (msg.sender.balance);
+  }
+
+  // _asyncTransfer(address dest, uint256 amount)
+
+  function async(address dest, uint256 amount) public {
+    _asyncTransfer( dest, amount);
   }
 
   // function sendMoney(address payable _to, uint ethValue) public payable{

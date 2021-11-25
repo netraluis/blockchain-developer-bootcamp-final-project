@@ -8,7 +8,8 @@ module.exports = {
     development: {
       host: "localhost",
       port: 8545,
-      network_id: "1337"
+      network_id: "1337",
+
     },
     develop: {
      host: "127.0.0.1",     // Localhost (default: none)
