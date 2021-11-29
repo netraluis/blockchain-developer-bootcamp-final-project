@@ -40,15 +40,6 @@ contract SupplyChain is PullPayment {
     uint charged;
     uint toCollect;
   }
-  /* 
-   * Events
-   */
-
-  // // <LogForSale event: sku arg>
-  // event LogForSale(uint sku);
-
-  // // <LogSold event: sku arg>
-  // event LogSold(uint sku);
 
   // <logForShipment event: sku arg>
   event LogForShipment(uint sku);
@@ -135,10 +126,9 @@ contract SupplyChain is PullPayment {
 
     emit ItemChange(items[skuCount]);
     
-    emit LogForShipment(skuCount);
     if( msg.sender.balance > msg.value ){
-      emit AddMoneyToAccount(_shipper, msg.value);
       _asyncTransfer(_shipper, msg.value );
+      emit AddMoneyToAccount(_shipper, msg.value);
       skuCount = skuCount + 1;
       return true;
     }else{
@@ -147,15 +137,14 @@ contract SupplyChain is PullPayment {
     
   }
 
-  function shipItem(uint sku) public forShipment(sku) {
-    items[sku].shipper = payable(msg.sender);
+  function shipItem(uint sku) public {
     items[sku].state = State.Shipped;
-    emit LogShipped(sku);
+    emit ItemChange(items[sku]);
   }
 
-  function receiveItem(uint sku) public shipped(sku) verifyCaller(items[sku].receiver){
+  function receiveItem(uint sku) public shipped(sku) {
     items[sku].state = State.Received;
-    emit LogReceived(sku);
+    emit ItemChange(items[sku]);
   }
 
   function payShipper(uint sku) public received(sku) {
@@ -164,6 +153,7 @@ contract SupplyChain is PullPayment {
     require(address(items[sku].sender).balance >= items[sku].price);
     // sendMoney(items[sku].shipper, items[sku].price);
     items[sku].state = State.ShipperPaid;
+    emit ItemChange(items[sku]);
   }
 
    function fetchItem(uint _sku) public view 
