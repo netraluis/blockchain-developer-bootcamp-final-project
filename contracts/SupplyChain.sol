@@ -11,6 +11,8 @@ contract SupplyChain is PullPayment {
   // <items mapping>
   mapping(uint => Item) public items;
 
+  mapping(address => uint[]) public pendingPayments;
+
   // <enum State: ForSale, Sold, Shipped, Received>
   // ForSale,
   // Sold,
@@ -49,6 +51,8 @@ contract SupplyChain is PullPayment {
   event AddMoneyToAccount(address _address, uint payment);  
 
   event ItemChange(Item item);
+
+  event UpdatePendingPayments(address _address, uint[] skus);
 
   /* 
    * Modifiers
@@ -136,6 +140,10 @@ contract SupplyChain is PullPayment {
   function receiveItem(uint sku) public shipped(sku) {
     items[sku].state = State.Received;
     emit ItemChange(items[sku]);
+
+    pendingPayments[items[sku].shipper].push(skuCount);
+    pendingPayments[items[sku].shipper].push(skuCount);
+    emit UpdatePendingPayments(items[sku].shipper, pendingPayments[items[sku].shipper]);
   }
 
   function payShipper(uint sku) public received(sku) {
@@ -145,7 +153,6 @@ contract SupplyChain is PullPayment {
     // sendMoney(items[sku].shipper, items[sku].price);
     items[sku].state = State.ShipperPaid;
     emit ItemChange(items[sku]);
- 
   }
 
    function fetchItem(uint _sku) public view 
@@ -168,12 +175,13 @@ contract SupplyChain is PullPayment {
   }
 
   function withdrawPayments(address payable payee) public override{
+    for (uint i = 0; i < pendingPayments[payee].length; i++) {
+      items[i].state = State.ShipperPaid;
+      emit ItemChange(items[i]);
+    }
     super.withdrawPayments(payee);
-    // for (uint i = 0; i < pendantPayments[payee].length; i++) {
-    //   items[i].state = State.ShipperPaid;
-    //   emit ItemChange(items[i]);
-    // }
-    // pendantPayments[payee];
+    delete pendingPayments[payee];
+    emit UpdatePendingPayments(payee, pendingPayments[payee]);
   }
 
 

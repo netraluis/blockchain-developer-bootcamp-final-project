@@ -120,36 +120,58 @@ contract("SupplyChain", (accounts) => {
       } = event;
       return state * 1, states.RECEIVED;
     });
+
+    truffleAssert.eventEmitted(
+      receiveItemTx,
+      "UpdatePendingPayments",
+      async (event) => {
+        const { _address, skus } = event;
+        console.log({_address, skus: skus})
+        return (
+         true
+        );
+      }
+    );
+
+
   });
 
   it("it should change the state to payShipper", async () => {
 
-    // const balanceBeforePayingShipper = toBN(await web3.eth.getBalance(shipper));
-    // const payShipperTx = await SupplyChainInstance.withdrawPayments(shipper, {from: shipper});
-    // const gasUsed = toBN(payShipperTx.receipt.gasUsed);
-    // const gasPrice = toBN(
-    //   (await web3.eth.getTransaction(payShipperTx.tx)).gasPrice
-    // );
+    const balanceBeforePayingShipper = toBN(await web3.eth.getBalance(shipper));
+    const payShipperTx = await SupplyChainInstance.withdrawPayments(shipper, {from: shipper});
+    const gasUsed = toBN(payShipperTx.receipt.gasUsed);
+    const gasPrice = toBN(
+      (await web3.eth.getTransaction(payShipperTx.tx)).gasPrice
+    );
 
-    // const balanceAfterPayingShipper = toBN(await web3.eth.getBalance(shipper));
+    const balanceAfterPayingShipper = toBN(await web3.eth.getBalance(shipper));
 
-    // expect(balanceBeforePayingShipper.add(toBN(firstPriceItem)).toString()).to.equal(
-    //   balanceAfterPayingShipper.add(gasPrice.mul(gasUsed)).toString()
-    // );
+    expect(balanceBeforePayingShipper.add(toBN(firstPriceItem)).toString()).to.equal(
+      balanceAfterPayingShipper.add(gasPrice.mul(gasUsed)).toString()
+    );
 
-    const fetchItem = await SupplyChainInstance.fetchItem(0, {from: shipper});
-    console.log({
-      fetchItem, 
-      pendantPaymentsLen: fetchItem.pendantPaymentsLen.toString(),
-      numberSkus: fetchItem.numberSkus.toString()
-    })
 
-    // truffleAssert.eventEmitted(payShipperTx, "ItemChange", async (event) => {
-    //   const {
-    //     item: { state },
-    //   } = event;
-    //   return state * 1, states.SHIPPER_PAID;
-    // });
+    truffleAssert.eventEmitted(payShipperTx, "ItemChange", async (event) => {
+      const {
+        item: { state },
+      } = event;
+
+      return state * 1, states.SHIPPER_PAID;
+    });
+
+    truffleAssert.eventEmitted(
+      payShipperTx,
+      "UpdatePendingPayments",
+      async (event) => {
+        const { _address, skus } = event;
+        console.log({_address, skus: skus})
+        return (
+         true
+        );
+      }
+    );
+
 
   });
 });
