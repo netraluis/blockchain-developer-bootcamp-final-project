@@ -4,16 +4,12 @@ import "@openzeppelin/contracts/security/PullPayment.sol";
 
 contract SupplyChain is PullPayment {
 
-  // <owner>
-  address public owner;
 
   // <skuCount>
   uint public skuCount;
 
   // <items mapping>
   mapping(uint => Item) public items;
-
-  mapping(address => uint)  public balances;
 
   // <enum State: ForSale, Sold, Shipped, Received>
   // ForSale,
@@ -60,19 +56,15 @@ contract SupplyChain is PullPayment {
 
   // Create a modifer, `isOwner` that checks if the msg.sender is the owner of the contract
 
-  // <modifier: isOwner
-  modifier isOwner (address _address) { 
-    require (msg.sender == owner); 
-    _;
-  }
+
 
   modifier verifyCaller (address _address) { 
     require (msg.sender == _address); 
     _;
   }
 
-  modifier paidEnough(uint _price) { 
-    require(msg.value >= _price); 
+  modifier enoughMoney() { 
+    require(msg.sender.balance > msg.value); 
     _;
   }
 
@@ -100,7 +92,6 @@ contract SupplyChain is PullPayment {
 
   modifier forShipment (uint _sku) {
     require(items[_sku].state == State.ForShipment); 
-     //   require(items[_sku].sender != address(0)); 
     _;
   }
    modifier shipped(uint _sku) {
@@ -113,7 +104,8 @@ contract SupplyChain is PullPayment {
     _;
   }
 
-  function addItem(string memory _name, address payable _receiver, address payable _shipper) public payable returns (bool) {
+  function addItem(string memory _name, address payable _receiver, address payable _shipper) 
+    enoughMoney() public payable returns (bool) {
     items[skuCount] = Item({
       name: _name, 
       sku: skuCount, 
@@ -123,7 +115,6 @@ contract SupplyChain is PullPayment {
       receiver: payable(_receiver),
       shipper: payable(_shipper)
     });
-
     emit ItemChange(items[skuCount]);
     
     if( msg.sender.balance > msg.value ){
@@ -154,6 +145,7 @@ contract SupplyChain is PullPayment {
     // sendMoney(items[sku].shipper, items[sku].price);
     items[sku].state = State.ShipperPaid;
     emit ItemChange(items[sku]);
+ 
   }
 
    function fetchItem(uint _sku) public view 
@@ -175,18 +167,15 @@ contract SupplyChain is PullPayment {
     return (msg.sender.balance);
   }
 
-  // _asyncTransfer(address dest, uint256 amount)
-
-  function async(address dest, uint256 amount) public {
-    _asyncTransfer( dest, amount);
+  function withdrawPayments(address payable payee) public override{
+    super.withdrawPayments(payee);
+    // for (uint i = 0; i < pendantPayments[payee].length; i++) {
+    //   items[i].state = State.ShipperPaid;
+    //   emit ItemChange(items[i]);
+    // }
+    // pendantPayments[payee];
   }
 
-  // function sendMoney(address payable _to, uint ethValue) public payable{
-  //   // Call returns a boolean value indicating success or failure.
-  //   // This is the current recommended method to use.
-  //   (bool sent, bytes memory data) = _to.call{value: ethValue}("");
-  //   require(sent, "Failed to send Ether");
-  // }
 
 
   // https://docs.openzeppelin.com/contracts/4.x/api/security
