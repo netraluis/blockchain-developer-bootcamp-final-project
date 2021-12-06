@@ -13,6 +13,8 @@ contract SupplyChain is PullPayment {
 
   mapping(address => uint[]) public pendingPayments;
 
+  mapping(uint => ShipperOffer[] ) public ShipperOffers;
+
   // <enum State: ForSale, Sold, Shipped, Received>
   // ForSale,
   // Sold,
@@ -34,10 +36,11 @@ contract SupplyChain is PullPayment {
     address payable shipper; 
   }
 
-  struct Balance {
-    uint charged;
-    uint toCollect;
+  struct ShipperOffer {
+    address shipper;
+    uint price;
   }
+
 
   // <logForShipment event: sku arg>
   event LogForShipment(uint sku);
@@ -106,6 +109,54 @@ contract SupplyChain is PullPayment {
    modifier received(uint _sku) {
     require(items[_sku].state == State.Received); 
     _;
+  }
+
+  function sellItem(string memory _name, uint productPrice ) public {
+    items[skuCount] = Item({
+      name: _name, 
+      sku: skuCount, 
+      price: productPrice*1e18, 
+      state: State.ForShipment, 
+      sender: payable(msg.sender), 
+      receiver: payable(address(0)),
+      shipper: payable(address(0))
+    });
+
+    skuCount = skuCount + 1;
+  }
+
+  function buyItem(uint sku) enoughMoney() public payable returns (bool){
+    items[sku].state = State.Shipped;
+    items[sku].receiver = payable(msg.sender);
+    if( msg.sender.balance > msg.value ){
+      _asyncTransfer(items[sku].sender, msg.value );
+      emit AddMoneyToAccount(items[sku].sender, msg.value);
+      
+      return true;
+    }else{
+      return false;
+    }
+  }
+
+  function transportItem(uint sku, uint price) public{
+    ShipperOffers[sku].push(ShipperOffer({shipper: payable(msg.sender), price: price}));
+  }
+
+  function addItem(string memory _name, address payable _receiver, address payable _shipper, uint sku) 
+    enoughMoney() public payable returns (bool) {
+    require(items[sku].price <= msg.value, "Price has to be less tan your value");
+    items[sku].price = msg.value;
+    emit ItemChange(items[skuCount]);
+    
+    if( msg.sender.balance > msg.value ){
+      _asyncTransfer(_shipper, msg.value );
+      emit AddMoneyToAccount(_shipper, msg.value);
+      skuCount = skuCount + 1;
+      return true;
+    }else{
+      return false;
+    }
+    
   }
 
   function addItem(string memory _name, address payable _receiver, address payable _shipper) 
